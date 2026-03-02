@@ -1,86 +1,93 @@
 # LangGraph — Learning Notebooks
 
-Beginner-friendly notebooks for learning how to build AI workflows using [LangGraph](https://github.com/langchain-ai/langgraph).
+Beginner-friendly notebooks for learning how to build AI workflows using [LangGraph](https://github.com/langchain-ai/langgraph) with **Ollama** (runs models locally, no API key needed).
 
 ---
 
 ## What is LangGraph?
 
-LangGraph lets you build AI applications as a **graph** — where each step (node) does one job, and edges connect them in sequence or with branching logic. Think of it as a flowchart where each box calls an LLM or runs some logic.
+LangGraph lets you build AI applications as a **graph** — each step (node) does one job, edges connect them in sequence or with conditional logic.
 
-**Core concepts you'll need:**
-- **State** — a shared dictionary passed between all steps
-- **Node** — a Python function that reads/updates the state
-- **Edge** — a connection between nodes (can be conditional)
-- **StateGraph** — the object that wires everything together
+**Core concepts:**
+- **State** — shared dictionary passed between all steps
+- **Node** — a Python function that reads/updates state
+- **Edge** — connection between nodes (can be conditional)
+- **StateGraph** — wires everything together
+
+---
+
+## What is Ollama?
+
+Ollama runs LLMs locally on your machine. No OpenAI key, no cost per token.
 
 ---
 
 ## Notebooks
 
-### `BMI.ipynb`
-A simple BMI calculator built as a LangGraph state machine.
-Good for understanding: how state flows through nodes, basic graph construction.
-
-### `prompt_chaining.ipynb`
-Breaks a complex task into a sequence of LLM calls — each prompt feeds into the next.
-Good for understanding: multi-step LLM workflows, passing outputs between nodes.
-
-### `LLM_Overflow.ipynb`
-Handles scenarios where LLM context/token limits are exceeded using graph-based flow control.
-Good for understanding: conditional edges, error handling in graphs.
+| File | What it teaches |
+|------|-----------------|
+| `BMI.ipynb` | Basic state machine — input flows through nodes, logic runs, result returns |
+| `prompt_chaining.ipynb` | Chain multiple LLM calls — output of one prompt becomes input of next |
+| `LLM_Overflow.ipynb` | Handle token/context overflow using conditional edges |
 
 ---
 
 ## Setup
 
-**Install dependencies:**
+**1. Install Ollama**
+
+Download from [ollama.com](https://ollama.com) and pull a model:
 ```bash
-pip install langgraph langchain langchain-openai
+ollama pull llama3
 ```
 
-**Set your API key:**
+Make sure Ollama is running before executing any notebook:
 ```bash
-# On Mac/Linux
-export OPENAI_API_KEY=your_key_here
-
-# On Windows
-set OPENAI_API_KEY=your_key_here
+ollama serve
 ```
 
-**Run notebooks:**
+**2. Install Python dependencies**
+```bash
+pip install langgraph langchain langchain-ollama
+```
+
+**3. Run notebooks**
 ```bash
 jupyter notebook
 ```
-Then open any `.ipynb` file and run cells top to bottom.
 
 ---
 
-## Minimal LangGraph Example
+## Minimal LangGraph + Ollama Example
 ```python
 from langgraph.graph import StateGraph, END
+from langchain_ollama import OllamaLLM
 from typing import TypedDict
 
-# 1. Define shared state
+# 1. Load local model via Ollama
+llm = OllamaLLM(model="llama3")
+
+# 2. Define shared state
 class State(TypedDict):
-    input: str
-    result: str
+    question: str
+    answer: str
 
-# 2. Define nodes (functions that update state)
-def process(state: State):
-    return {"result": f"Processed: {state['input']}"}
+# 3. Define node
+def ask_llm(state: State):
+    response = llm.invoke(state["question"])
+    return {"answer": response}
 
-# 3. Build the graph
+# 4. Build graph
 graph = StateGraph(State)
-graph.add_node("process", process)
-graph.set_entry_point("process")
-graph.add_edge("process", END)
+graph.add_node("ask_llm", ask_llm)
+graph.set_entry_point("ask_llm")
+graph.add_edge("ask_llm", END)
 
 app = graph.compile()
 
-# 4. Run it
-output = app.invoke({"input": "hello"})
-print(output["result"])  # Processed: hello
+# 5. Run
+output = app.invoke({"question": "What is LangGraph?"})
+print(output["answer"])
 ```
 
 ---
@@ -88,7 +95,8 @@ print(output["result"])  # Processed: hello
 ## Requirements
 
 - Python 3.9+
-- OpenAI API key (or any LangChain-supported LLM)
+- [Ollama](https://ollama.com) installed and running
+- Any Ollama-supported model pulled locally (e.g. `llama3`, `mistral`, `gemma`)
 
 ---
 
@@ -96,3 +104,4 @@ print(output["result"])  # Processed: hello
 
 - [LangGraph Docs](https://langchain-ai.github.io/langgraph/)
 - [LangGraph Quickstart](https://langchain-ai.github.io/langgraph/tutorials/introduction/)
+- [Ollama Model Library](https://ollama.com/library)
